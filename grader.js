@@ -48,32 +48,31 @@ var loadChecks = function(checksfile) {
 
 var checkHtmlFile = function(htmlfile, checksfile) {
     $ = cheerioHtmlFile(htmlfile);
-    var checks = loadChecks(checksfile).sort();
-    var out = {};
-    for(var ii in checks) {
-        var present = $(checks[ii]).length > 0;
-        out[checks[ii]] = present;
-    }
-    return out;
+    return checkHtml($, checksfile);
 };
 
-var checkUrl = function(url, checksfile) {
+var checkHtmlUrl = function(url, checksfile) {
     rest.get(url).on('complete', function (result) {
 	if (result instanceof Error) {
 	    console.log("URL %s was not found. Exiting.", url);
             process.exit(1);
 	}
 	$ = cheerio.load(result);
-	var checks = loadChecks(checksfile).sort();
-	var out = {};
-	for(var ii in checks) {
-            var present = $(checks[ii]).length > 0;
-            out[checks[ii]] = present;
-	}
-	var outJson = JSON.stringify(out, null, 4);
+	var checkJson = checkHtml($, checksfile);
+	var outJson = JSON.stringify(checkJson, null, 4);
 	console.log(outJson);
     });
-}
+};
+
+var checkHtml = function(html, checksfile) {
+    var checks = loadChecks(checksfile).sort();
+    var out = {};
+    for(var ii in checks) {
+        var present = html(checks[ii]).length > 0;
+        out[checks[ii]] = present;
+    }
+    return out;
+};
 
 var clone = function(fn) {
     // Workaround for commander.js issue.
@@ -87,10 +86,10 @@ if(require.main == module) {
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
 	.option('-u, --url <url>', 'URL to check')
         .parse(process.argv);
-
+    
     // URL overrides file option.
     if (program.url) {
-	checkUrl(program.url, program.checks);
+	checkHtmlUrl(program.url, program.checks);
     }
     else if (program.file) {
 	var checkJson = checkHtmlFile(program.file, program.checks);
